@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LS Tier III Escalation Dash</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 text-white">
+    
+    <!-- Animated Background -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none opacity-20">
+        <div class="absolute w-96 h-96 bg-cyan-500 rounded-full blur-3xl animate-pulse" style="top: 10%; left: 10%;"></div>
+        <div class="absolute w-96 h-96 bg-purple-500 rounded-full blur-3xl animate-pulse" style="top: 60%; right: 10%; animation-delay: 1s;"></div>
+        <div class="absolute w-96 h-96 bg-pink-500 rounded-full blur-3xl animate-pulse" style="bottom: 10%; left: 50%; animation-delay: 2s;"></div>
+    </div>
+
+    <div class="relative z-10 max-w-7xl mx-auto p-8">
+        <!-- Header -->
+        <div class="mb-12 text-center">
+            <div class="inline-block mb-4">
+                <div class="h-1 w-32 bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 rounded-full mb-4 mx-auto animate-pulse"></div>
+            </div>
+            <h1 class="text-6xl font-bold mb-2 bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                LS Tier III Escalation Dash
+            </h1>
+            <p class="text-cyan-300 text-lg font-light tracking-widest">OPERATIONAL INTELLIGENCE SYSTEM</p>
+            
+            <!-- Data Source Control -->
+            <div class="mt-6 flex justify-center gap-3">
+                <button id="changeDataBtn" class="px-5 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 rounded-lg font-semibold text-sm transition-all shadow-lg shadow-cyan-500/30">
+                    📊 Change Data Source
+                </button>
+                <button id="resetDataBtn" class="px-5 py-2 bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 rounded-lg font-semibold text-sm transition-all hidden">
+                    ↺ Reset to Default
+                </button>
+            </div>
+            
+            <!-- Upload Modal -->
+            <div id="uploadModal" class="mt-4 mx-auto max-w-md bg-gray-800 bg-opacity-90 backdrop-blur-lg rounded-xl p-6 border border-cyan-500 shadow-xl hidden">
+                <h3 class="text-lg font-semibold text-cyan-400 mb-3">Upload CSV File</h3>
+                <p class="text-gray-400 text-sm mb-4">Select a CSV file with the same format as the default data</p>
+                <input type="file" id="csvFileInput" accept=".csv" class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-gradient-to-r file:from-purple-500 file:to-pink-500 file:text-white file:font-semibold hover:file:from-purple-600 hover:file:to-pink-600 file:cursor-pointer">
+                <button id="cancelUploadBtn" class="mt-3 text-gray-500 hover:text-gray-300 text-sm">Cancel</button>
+            </div>
+        </div>
+
+        <!-- Key Metrics -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            <div class="bg-gray-800 bg-opacity-50 backdrop-blur-lg rounded-2xl p-6 border border-cyan-500 shadow-lg shadow-cyan-500/50 hover:shadow-cyan-500/80 transition-all">
+                <div class="text-cyan-400 text-sm font-semibold mb-2 tracking-wider">TOTAL ESCALATIONS</div>
+                <div id="totalEscalations" class="text-5xl font-bold text-white mb-2">0</div>
+                <div class="text-gray-400 text-xs">Active tracking period</div>
+            </div>
+            
+            <div class="bg-gray-800 bg-opacity-50 backdrop-blur-lg rounded-2xl p-6 border border-purple-500 shadow-lg shadow-purple-500/50 hover:shadow-purple-500/80 transition-all">
+                <div class="text-purple-400 text-sm font-semibold mb-2 tracking-wider">AGENTS</div>
+                <div id="uniqueAgents" class="text-5xl font-bold text-white mb-2">0</div>
+                <div class="text-gray-400 text-xs">Creating escalations</div>
+            </div>
+            
+            <div class="bg-gray-800 bg-opacity-50 backdrop-blur-lg rounded-2xl p-6 border border-pink-500 shadow-lg shadow-pink-500/50 hover:shadow-pink-500/80 transition-all">
+                <div class="text-pink-400 text-sm font-semibold mb-2 tracking-wider">EA AGENTS</div>
+                <div id="uniqueEAAgents" class="text-5xl font-bold text-white mb-2">0</div>
+                <div class="text-gray-400 text-xs">Handling escalations</div>
+            </div>
+        </div>
+
+        <!-- View Selector -->
+        <div class="flex justify-center gap-4 mb-8">
+            <button class="view-btn px-6 py-3 rounded-lg font-semibold tracking-wider uppercase text-sm transition-all bg-gradient-to-r from-cyan-500 to-purple-500 text-white shadow-lg shadow-purple-500/50" data-view="overview">overview</button>
+            <button class="view-btn px-6 py-3 rounded-lg font-semibold tracking-wider uppercase text-sm transition-all bg-gray-800 bg-opacity-50 text-gray-400 hover:text-white border border-gray-700" data-view="categories">categories</button>
+            <button class="view-btn px-6 py-3 rounded-lg font-semibold tracking-wider uppercase text-sm transition-all bg-gray-800 bg-opacity-50 text-gray-400 hover:text-white border border-gray-700" data-view="agents">agents</button>
+        </div>
+
+        <!-- Charts Container -->
+        <div id="chartsContainer"></div>
+
+        <!-- Footer -->
+        <div class="mt-12 text-center text-gray-500 text-sm">
+            <div class="h-px w-64 bg-gradient-to-r from-transparent via-gray-700 to-transparent mx-auto mb-4"></div>
+            <p>Data Analytics • Real-time Monitoring • Performance Insights</p>
+        </div>
+    </div>
+
+    <!-- Agent Tickets Modal -->
+    <div id="agentModal" class="fixed inset-0 bg-black bg-opacity-75 z-50 items-center justify-center p-4 hidden">
+        <div class="bg-gray-900 border border-cyan-500 rounded-2xl w-full max-w-5xl shadow-2xl shadow-cyan-500/50" style="max-height: calc(100vh - 2rem);">
+            <!-- Fixed Header -->
+            <div class="bg-gradient-to-r from-cyan-600 to-purple-600 p-6 flex items-center justify-between rounded-t-2xl">
+                <div>
+                    <h3 id="modalAgentName" class="text-2xl font-bold text-white"></h3>
+                    <p id="modalAgentType" class="text-cyan-100 text-sm"></p>
+                </div>
+                <button id="closeModalBtn" class="text-white hover:text-gray-300 text-3xl font-bold leading-none">×</button>
+            </div>
+            
+            <!-- Scrollable Content -->
+            <div id="modalTicketsContainer" class="p-6" style="max-height: calc(100vh - 12rem); overflow-y: auto;"></div>
+        </div>
+    </div>
+
+    <script>
+        // Default CSV Data
+        const defaultCSV = `agent_name,created_at_cst,ticket_id,ticket_link,ticket_category,escalations_chat_ticket,escalations_chat_link,escalations_agent,assisted_by_chatbot
+Abby Payad,2025-12-25T19:04:58,14176880,https://lawnstarter1.zendesk.com/agent/tickets/14176880,pro__scheduling__scheduling_problem,14177506,https://lawnstarter1.zendesk.com/agent/tickets/14177506,"Lomuntad, Ariel",0
+Abby Payad,2025-12-26T12:15:03,14177266,https://lawnstarter1.zendesk.com/agent/tickets/14177266,customer__billing_charges_payments__credits_deals,14177274,https://lawnstarter1.zendesk.com/agent/tickets/14177274,"Manuel, Rainald",0
+Abby Payad,2025-12-26T12:51:56,14177306,https://lawnstarter1.zendesk.com/agent/tickets/14177306,customer__billing_charges_payments__long_grass_fee,14177310,https://lawnstarter1.zendesk.com/agent/tickets/14177310,"Pascual, Joanne",0
+Abby Payad,2026-01-02T14:19:08,14182484,https://lawnstarter1.zendesk.com/agent/tickets/14182484,customer__service_help__service_quality_or_completion_problem,14188886,https://lawnstarter1.zendesk.com/agent/tickets/14188886,"De Guzman, Margie",0
+Abby Payad,2026-01-02T14:19:08,14182484,https://lawnstarter1.zendesk.com/agent/tickets/14182484,customer__service_help__service_quality_or_completion_problem,14187622,https://lawnstarter1.zendesk.com/agent/tickets/14187622,"De Guzman, Margie",0
+Abby Payad,2026-01-04T12:41:43,14183743,https://lawnstarter1.zendesk.com/agent/tickets/14183743,pro__service_help__help_with_dispute,14183744,https://lawnstarter1.zendesk.com/agent/tickets/14183744,"Malacad, Christian",0
+Abby Payad,2026-01-09T13:49:02,14188665,https://lawnstarter1.zendesk.com/agent/tickets/14188665,pro__service_help__help_with_dispute,14190480,https://lawnstarter1.zendesk.com/agent/tickets/14190480,"Carrera, Mara",0
+Abby Payad,2026-01-11T09:31:10,14189868,https://lawnstarter1.zendesk.com/agent/tickets/14189868,customer__account_or_tech_help__app_website_problems,14189876,https://lawnstarter1.zendesk.com/agent/tickets/14189876,"Malacad, Christian",0
+Abby Payad,2026-01-12T14:46:05,14191096,https://lawnstarter1.zendesk.com/agent/tickets/14191096,pro__account_or_tech_help__account_help,14191114,https://lawnstarter1.zendesk.com/agent/tickets/14191114,"Malacad, Christian",0
+Abby Payad,2026-01-12T18:14:51,14191361,https://lawnstarter1.zendesk.com/agent/tickets/14191361,pro__account_or_tech_help__account_help,14191391,https://lawnstarter1.zendesk.com/agent/tickets/14191391,"Umali, Yasmin",0
+Albert DeJesus,2025-12-23T10:34:32,14172678,https://lawnstarter1.zendesk.com/agent/tickets/14172678,customer__billing_charges_payments__credits_deals,14172695,https://lawnstarter1.zendesk.com/agent/tickets/14172695,"Manuel, Rainald",0
+Albert DeJesus,2026-01-01T11:15:13,14181665,https://lawnstarter1.zendesk.com/agent/tickets/14181665,pro__account_or_tech_help__account_help,14181976,https://lawnstarter1.zendesk.com/agent/tickets/14181976,"Carrera, Mara",0
+Albert DeJesus,2026-01-02T08:56:24,14182012,https://lawnstarter1.zendesk.com/agent/tickets/14182012,pro__scheduling__scheduling_problem,14182052,https://lawnstarter1.zendesk.com/agent/tickets/14182052,"Lomuntad, Ariel",0
+Albert DeJesus,2026-01-02T09:55:15,14182085,https://lawnstarter1.zendesk.com/agent/tickets/14182085,customer__service_help__service_quality_or_completion_problem,14187485,https://lawnstarter1.zendesk.com/agent/tickets/14187485,"Lomuntad, Ariel",0
+Albert DeJesus,2026-01-06T09:55:26,14185423,https://lawnstarter1.zendesk.com/agent/tickets/14185423,pro__service_help__quote_or_service_detail_problem,14188384,https://lawnstarter1.zendesk.com/agent/tickets/14188384,"Lomuntad, Ariel",0
+Albert DeJesus,2026-01-06T13:38:07,14185871,https://lawnstarter1.zendesk.com/agent/tickets/14185871,pro__billing_payouts_fees_banking__payouts_fees,14185897,https://lawnstarter1.zendesk.com/agent/tickets/14185897,"Malacad, Christian",0
+Albert DeJesus,2026-01-06T22:48:37,14186229,https://lawnstarter1.zendesk.com/agent/tickets/14186229,pro__billing_payouts_fees_banking__payouts_fees,14186287,https://lawnstarter1.zendesk.com/agent/tickets/14186287,"Carrera, Mara",0
+Albert DeJesus,2026-01-07T06:12:20,14186281,https://lawnstarter1.zendesk.com/agent/tickets/14186281,pro__scheduling__scheduling_complaints,14186367,https://lawnstarter1.zendesk.com/agent/tickets/14186367,"Attar, Myra Tfankaji",0
+Albert DeJesus,2026-01-07T06:12:20,14186281,https://lawnstarter1.zendesk.com/agent/tickets/14186281,pro__scheduling__scheduling_complaints,14186308,https://lawnstarter1.zendesk.com/agent/tickets/14186308,"Agunod, King",0
+Albert DeJesus,2026-01-08T13:05:29,14187748,https://lawnstarter1.zendesk.com/agent/tickets/14187748,pro__service_help__quote_or_service_detail_problem,14188231,https://lawnstarter1.zendesk.com/agent/tickets/14188231,"Pascual, Joanne",0
+Albert DeJesus,2026-01-08T13:05:29,14187748,https://lawnstarter1.zendesk.com/agent/tickets/14187748,pro__service_help__quote_or_service_detail_problem,14187846,https://lawnstarter1.zendesk.com/agent/tickets/14187846,"De Guzman, Margie",0
+Albert DeJesus,2026-01-09T14:22:46,14188701,https://lawnstarter1.zendesk.com/agent/tickets/14188701,customer__service_help__service_quality_or_completion_problem,14190489,https://lawnstarter1.zendesk.com/agent/tickets/14190489,"Manuel, Rainald",0
+Albert DeJesus,2026-01-09T18:16:05,14188957,https://lawnstarter1.zendesk.com/agent/tickets/14188957,customer__billing_charges_payments__credits_deals,14189337,https://lawnstarter1.zendesk.com/agent/tickets/14189337,"Currens, Joe",0
+Albert DeJesus,2026-01-12T14:53:06,14191110,https://lawnstarter1.zendesk.com/agent/tickets/14191110,pro__account_or_tech_help__account_help,14191165,https://lawnstarter1.zendesk.com/agent/tickets/14191165,"Attar, Myra Tfankaji",0
+Albert DeJesus,2026-01-12T20:25:12,14191451,https://lawnstarter1.zendesk.com/agent/tickets/14191451,pro__account_or_tech_help__account_help,14191554,https://lawnstarter1.zendesk.com/agent/tickets/14191554,"Carrera, Mara",0
+Albert DeJesus,2026-01-13T09:38:21,14191777,https://lawnstarter1.zendesk.com/agent/tickets/14191777,customer__service_help__service_quality_or_completion_problem,14194332,https://lawnstarter1.zendesk.com/agent/tickets/14194332,"Umali, Yasmin",0
+Albert DeJesus,2026-01-13T12:53:31,14192085,https://lawnstarter1.zendesk.com/agent/tickets/14192085,pro__billing_payouts_fees_banking__payouts_fees,14194499,https://lawnstarter1.zendesk.com/agent/tickets/14194499,"Carrera, Mara",0
+Albert DeJesus,2026-01-13T15:23:12,14192328,https://lawnstarter1.zendesk.com/agent/tickets/14192328,pro__billing_payouts_fees_banking__payouts_fees,14192372,https://lawnstarter1.zendesk.com/agent/tickets/14192372,"Malacad, Christian",0
+Anthony Malicsi,2026-01-02T19:05:59,14182791,https://lawnstarter1.zendesk.com/agent/tickets/14182791,pro__account_or_tech_help__account_help,14182796,https://lawnstarter1.zendesk.com/agent/tickets/14182796,"De Guzman, Margie",0
+Anthony Malicsi,2026-01-03T17:18:21,14183424,https://lawnstarter1.zendesk.com/agent/tickets/14183424,pro__billing_payouts_fees_banking__payouts_fees,14183824,https://lawnstarter1.zendesk.com/agent/tickets/14183824,"Malacad, Christian",0
+Anthony Malicsi,2026-01-06T19:06:15,14186154,https://lawnstarter1.zendesk.com/agent/tickets/14186154,pro__service_help__service_help,14189676,https://lawnstarter1.zendesk.com/agent/tickets/14189676,"De Guzman, Margie",0
+Anthony Malicsi,2026-01-08T18:46:46,14188074,https://lawnstarter1.zendesk.com/agent/tickets/14188074,pro__service_help__service_help,14188084,https://lawnstarter1.zendesk.com/agent/tickets/14188084,"Currens, Joe",0
+Anthony Malicsi,2026-01-12T15:27:34,14191169,https://lawnstarter1.zendesk.com/agent/tickets/14191169,customer__scheduling__change_schedule,14191208,https://lawnstarter1.zendesk.com/agent/tickets/14191208,"Umali, Yasmin",0
+Anthony Malicsi,2026-01-12T16:15:54,14191239,https://lawnstarter1.zendesk.com/agent/tickets/14191239,pro__service_help__service_help,14191305,https://lawnstarter1.zendesk.com/agent/tickets/14191305,"Umali, Yasmin",0
+Anthony Malicsi,2026-01-12T16:15:54,14191239,https://lawnstarter1.zendesk.com/agent/tickets/14191239,pro__service_help__service_help,14191271,https://lawnstarter1.zendesk.com/agent/tickets/14191271,"Attar, Myra Tfankaji",0
+Anthony Malicsi,2026-01-14T11:18:50,14192984,https://lawnstarter1.zendesk.com/agent/tickets/14192984,customer__help_with_your_pro__pro_feedback,14194276,https://lawnstarter1.zendesk.com/agent/tickets/14194276,"De Guzman, Margie",0
+Anthony Malicsi,2026-01-17T14:40:06,14195740,https://lawnstarter1.zendesk.com/agent/tickets/14195740,pro__account_or_tech_help__account_help,14195770,https://lawnstarter1.zendesk.com/agent/tickets/14195770,"De Guzman, Margie",0
+Ara Mae Cabactulan,2025-12-27T08:24:40,14177750,https://lawnstarter1.zendesk.com/agent/tickets/14177750,customer__service_help__service_details,14177755,https://lawnstarter1.zendesk.com/agent/tickets/14177755,"Agunod, King",0
+Ara Mae Cabactulan,2025-12-27T15:20:32,14178153,https://lawnstarter1.zendesk.com/agent/tickets/14178153,customer__billing_charges_payments__long_grass_fee,14178166,https://lawnstarter1.zendesk.com/agent/tickets/14178166,"De Guzman, Margie",0
+Ara Mae Cabactulan,2025-12-30T10:30:01,14180180,https://lawnstarter1.zendesk.com/agent/tickets/14180180,pro__account_or_tech_help__account_help,14180195,https://lawnstarter1.zendesk.com/agent/tickets/14180195,"Malacad, Christian",0
+Ara Mae Cabactulan,2025-12-31T13:24:04,14181253,https://lawnstarter1.zendesk.com/agent/tickets/14181253,customer__scheduling__arrival_time_inquiry,14181255,https://lawnstarter1.zendesk.com/agent/tickets/14181255,"Alova, Jade",0
+Ara Mae Cabactulan,2025-12-31T14:38:20,14181316,https://lawnstarter1.zendesk.com/agent/tickets/14181316,pro__scheduling__schedule_change_request,14181320,https://lawnstarter1.zendesk.com/agent/tickets/14181320,"Malacad, Christian",0
+Ara Mae Cabactulan,2025-12-31T14:50:06,14181327,https://lawnstarter1.zendesk.com/agent/tickets/14181327,pro__service_help__quote_or_service_detail_problem,14181353,https://lawnstarter1.zendesk.com/agent/tickets/14181353,"Malacad, Christian",0
+Ara Mae Cabactulan,2025-12-31T14:50:06,14181327,https://lawnstarter1.zendesk.com/agent/tickets/14181327,pro__service_help__quote_or_service_detail_problem,14181332,https://lawnstarter1.zendesk.com/agent/tickets/14181332,"Mina, Mark",0
+Ara Mae Cabactulan,2026-01-02T11:03:48,14182193,https://lawnstarter1.zendesk.com/agent/tickets/14182193,pro__scheduling__completion_problem,14182199,https://lawnstarter1.zendesk.com/agent/tickets/14182199,"De Guzman, Margie",0
+Ara Mae Cabactulan,2026-01-06T09:04:25,14185335,https://lawnstarter1.zendesk.com/agent/tickets/14185335,pro__service_help__quote_or_service_detail_problem,14185343,https://lawnstarter1.zendesk.com/agent/tickets/14185343,"Manuel, Rainald",0
+Ara Mae Cabactulan,2026-01-06T09:20:08,14185358,https://lawnstarter1.zendesk.com/agent/tickets/14185358,pro__account_or_tech_help__account_help,14185363,https://lawnstarter1.zendesk.com/agent/tickets/14185363,"Aviado, Marga",0
+Ara Mae Cabactulan,2026-01-06T13:04:55,14185839,https://lawnstarter1.zendesk.com/agent/tickets/14185839,customer__billing_charges_payments__credits_deals,14185844,https://lawnstarter1.zendesk.com/agent/tickets/14185844,"Mina, Mark",0
+Ara Mae Cabactulan,2026-01-07T07:50:32,14186316,https://lawnstarter1.zendesk.com/agent/tickets/14186316,pro__account_or_tech_help__account_help,14186321,https://lawnstarter1.zendesk.com/agent/tickets/14186321,"Aviado, Marga",0`;
+
+        let currentCSV = defaultCSV;
+        let tickets = [];
+        let currentView = 'overview';
+        let charts = {};
+
+        // Parse CSV
+        function parseCSV(csv) {
+            const lines = csv.trim().split('\n');
+            const headers = lines[0].split(',');
+            return lines.slice(1).map(line => {
+                const values = line.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g).map(v => v.replace(/^"|"$/g, ''));
+                const obj = {};
+                headers.forEach((header, index) => {
+                    obj[header] = values[index];
+                });
+                return obj;
+            });
+        }
+
+        // Calculate analytics
+        function calculateAnalytics(data) {
+            const totalTickets = data.length;
+            const uniqueAgents = new Set(data.map(t => t.agent_name)).size;
+            const uniqueEscalationAgents = new Set(data.map(t => t.escalations_agent)).size;
+            
+            // Category breakdown
+            const categoryCount = {};
+            data.forEach(t => {
+                const category = t.ticket_category;
+                categoryCount[category] = (categoryCount[category] || 0) + 1;
+            });
+            
+            // Top escalation agents
+            const escalationAgentCount = {};
+            data.forEach(t => {
+                escalationAgentCount[t.escalations_agent] = (escalationAgentCount[t.escalations_agent] || 0) + 1;
+            });
+            
+            // Daily trend
+            const dailyCount = {};
+            data.forEach(t => {
+                const date = t.created_at_cst.split('T')[0];
+                dailyCount[date] = (dailyCount[date] || 0) + 1;
+            });
+            
+            // Top agents creating escalations
+            const agentCount = {};
+            data.forEach(t => {
+                agentCount[t.agent_name] = (agentCount[t.agent_name] || 0) + 1;
+            });
+            
+            return {
+                totalTickets,
+                uniqueAgents,
+                uniqueEscalationAgents,
+                categoryData: Object.entries(categoryCount).map(([name, value]) => ({ name, value })),
+                escalationAgentData: Object.entries(escalationAgentCount)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 10)
+                    .map(([name, value]) => ({ name, value })),
+                dailyTrend: Object.entries(dailyCount)
+                    .sort((a, b) => a[0].localeCompare(b[0]))
+                    .map(([date, count]) => ({ date, count })),
+                topAgents: Object.entries(agentCount)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 10)
+                    .map(([name, value]) => ({ name, value }))
+            };
+        }
+
+        // Update metrics
+        function updateMetrics(analytics) {
+            document.getElementById('totalEscalations').textContent = analytics.totalTickets;
+            document.getElementById('uniqueAgents').textContent = analytics.uniqueAgents;
+            document.getElementById('uniqueEAAgents').textContent = analytics.uniqueEscalationAgents;
+        }
+
+        // Destroy existing charts
+        function destroyCharts() {
+            Object.values(charts).forEach(chart => {
+                if (chart) chart.destroy();
+            });
+            charts = {};
+        }
+
+        // Render overview
+        function renderOverview(analytics) {
+            const container = document.getElementById('chartsContainer');
+            container.innerHTML = `
+                <div class="space-y-8">
+                    <div class="bg-gray-800 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border border-gray-700">
+                        <h2 class="text-2xl font-bold mb-6 text-cyan-400">Escalation Timeline</h2>
+                        <canvas id="timelineChart" height="100"></canvas>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="bg-gray-800 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border border-gray-700">
+                            <h2 class="text-2xl font-bold mb-6 text-purple-400">Category Distribution</h2>
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                        <div class="bg-gray-800 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border border-gray-700">
+                            <h2 class="text-2xl font-bold mb-6 text-pink-400">Top Escalation Handlers</h2>
+                            <canvas id="handlersChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Timeline Chart
+            const timelineCtx = document.getElementById('timelineChart').getContext('2d');
+            charts.timeline = new Chart(timelineCtx, {
+                type: 'line',
+                data: {
+                    labels: analytics.dailyTrend.map(d => d.date),
+                    datasets: [{
+                        label: 'Escalations',
+                        data: analytics.dailyTrend.map(d => d.count),
+                        borderColor: '#00f5ff',
+                        backgroundColor: 'rgba(0, 245, 255, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#374151' },
+                            ticks: { color: '#9ca3af' }
+                        },
+                        x: {
+                            grid: { color: '#374151' },
+                            ticks: { color: '#9ca3af' }
+                        }
+                    }
+                }
+            });
+
+            // Category Chart
+            const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+            const colors = ['#00f5ff', '#ff00ff', '#00ff88', '#ffaa00', '#ff3366', '#9933ff', '#00ccff', '#ff6600'];
+            charts.category = new Chart(categoryCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: analytics.categoryData.map(d => d.name),
+                    datasets: [{
+                        data: analytics.categoryData.map(d => d.value),
+                        backgroundColor: colors
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+
+            // Handlers Chart
+            const handlersCtx = document.getElementById('handlersChart').getContext('2d');
+            charts.handlers = new Chart(handlersCtx, {
+                type: 'bar',
+                data: {
+                    labels: analytics.escalationAgentData.slice(0, 5).map(d => d.name),
+                    datasets: [{
+                        label: 'Escalations Handled',
+                        data: analytics.escalationAgentData.slice(0, 5).map(d => d.value),
+                        backgroundColor: '#ec4899'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#374151' },
+                            ticks: { color: '#9ca3af' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#9ca3af' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Render categories
+        function renderCategories(analytics) {
+            const container = document.getElementById('chartsContainer');
+            
+            // Get unique agents for filter
+            const allAgents = [...new Set(tickets.map(t => t.agent_name))].sort();
+            
+            container.innerHTML = `
+                <div class="bg-gray-800 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border border-gray-700">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold text-cyan-400">Escalations by Category</h2>
+                        <div class="flex items-center gap-3">
+                            <label class="text-gray-400 text-sm">Filter by Agent:</label>
+                            <select id="agentFilter" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-4 py-2 text-sm focus:border-cyan-500 focus:outline-none">
+                                <option value="">All Agents</option>
+                                ${allAgents.map(agent => `<option value="${agent}">${agent}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+                    <canvas id="categoriesChart" height="200"></canvas>
+                </div>
+            `;
+
+            function updateCategoriesChart(selectedAgent = '') {
+                const filteredTickets = selectedAgent 
+                    ? tickets.filter(t => t.agent_name === selectedAgent)
+                    : tickets;
+                
+                const categoryCount = {};
+                filteredTickets.forEach(t => {
+                    const category = t.ticket_category;
+                    categoryCount[category] = (categoryCount[category] || 0) + 1;
+                });
+                
+                const categoryData = Object.entries(categoryCount).map(([name, value]) => ({ name, value }));
+                
+                if (charts.categories) {
+                    charts.categories.destroy();
+                }
+                
+                const ctx = document.getElementById('categoriesChart').getContext('2d');
+                charts.categories = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: categoryData.map(d => d.name),
+                        datasets: [{
+                            label: 'Count',
+                            data: categoryData.map(d => d.value),
+                            backgroundColor: '#00f5ff'
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                grid: { color: '#374151' },
+                                ticks: { color: '#9ca3af' }
+                            },
+                            y: {
+                                grid: { display: false },
+                                ticks: { 
+                                    color: '#9ca3af',
+                                    font: { size: 10 }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            updateCategoriesChart();
+            
+            document.getElementById('agentFilter').addEventListener('change', (e) => {
+                updateCategoriesChart(e.target.value);
+            });
+        }
+
+        // Render agents
+        function renderAgents(analytics) {
+            const container = document.getElementById('chartsContainer');
+            container.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-gray-800 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border border-gray-700">
+                        <h2 class="text-2xl font-bold mb-6 text-cyan-400">Top Agents (Creating Escalations)</h2>
+                        <div id="agentsList" class="space-y-3"></div>
+                    </div>
+                    <div class="bg-gray-800 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border border-gray-700">
+                        <h2 class="text-2xl font-bold mb-6 text-purple-400">Top EA Agents (Handling Escalations)</h2>
+                        <div id="eaAgentsList" class="space-y-3"></div>
+                    </div>
+                </div>
+            `;
+
+            const agentsList = document.getElementById('agentsList');
+            analytics.topAgents.forEach((agent, index) => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between bg-gray-900 bg-opacity-50 p-4 rounded-lg border border-gray-700 hover:border-cyan-500 cursor-pointer transition-all hover:shadow-lg hover:shadow-cyan-500/30';
+                div.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="text-cyan-400 font-bold text-lg">#${index + 1}</div>
+                        <div>
+                            <div class="text-white font-semibold">${agent.name}</div>
+                            <div class="text-gray-400 text-sm">${agent.value} escalations</div>
+                        </div>
+                    </div>
+                    <div class="text-cyan-400 text-xl">→</div>
+                `;
+                div.onclick = () => showAgentModal(agent.name, 'tier1');
+                agentsList.appendChild(div);
+            });
+
+            const eaAgentsList = document.getElementById('eaAgentsList');
+            analytics.escalationAgentData.forEach((agent, index) => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between bg-gray-900 bg-opacity-50 p-4 rounded-lg border border-gray-700 hover:border-purple-500 cursor-pointer transition-all hover:shadow-lg hover:shadow-purple-500/30';
+                div.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="text-purple-400 font-bold text-lg">#${index + 1}</div>
+                        <div>
+                            <div class="text-white font-semibold">${agent.name}</div>
+                            <div class="text-gray-400 text-sm">${agent.value} escalations</div>
+                        </div>
+                    </div>
+                    <div class="text-purple-400 text-xl">→</div>
+                `;
+                div.onclick = () => showAgentModal(agent.name, 'ea');
+                eaAgentsList.appendChild(div);
+            });
+        }
+
+        // Show agent modal
+        function showAgentModal(agentName, type) {
+            const modal = document.getElementById('agentModal');
+            const modalAgentName = document.getElementById('modalAgentName');
+            const modalAgentType = document.getElementById('modalAgentType');
+            const modalTicketsContainer = document.getElementById('modalTicketsContainer');
+
+            modalAgentName.textContent = agentName;
+            modalAgentType.textContent = type === 'tier1' ? 'Escalations Created' : 'Escalations Handled';
+
+            const agentTickets = type === 'tier1' 
+                ? tickets.filter(t => t.agent_name === agentName)
+                : tickets.filter(t => t.escalations_agent === agentName);
+
+            modalTicketsContainer.innerHTML = '';
+            agentTickets.forEach(ticket => {
+                const div = document.createElement('div');
+                div.className = 'bg-gray-800 bg-opacity-50 border border-gray-700 rounded-lg p-4 hover:border-cyan-500 transition-all mb-3';
+                div.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
+                        <div>
+                            <div class="text-gray-400 text-xs mb-1">Ticket ID</div>
+                            <a href="${ticket.ticket_link}" target="_blank" rel="noopener noreferrer" class="text-cyan-400 font-mono hover:text-cyan-300 underline text-sm">
+                                ${ticket.ticket_id}
+                            </a>
+                        </div>
+                        <div>
+                            <div class="text-gray-400 text-xs mb-1">Escalation Ticket</div>
+                            <a href="${ticket.escalations_chat_link}" target="_blank" rel="noopener noreferrer" class="text-purple-400 font-mono hover:text-purple-300 underline text-sm">
+                                ${ticket.escalations_chat_ticket}
+                            </a>
+                        </div>
+                        <div>
+                            <div class="text-gray-400 text-xs mb-1">Category</div>
+                            <div class="text-white text-sm">${ticket.ticket_category}</div>
+                        </div>
+                    </div>
+                `;
+                modalTicketsContainer.appendChild(div);
+            });
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        // Render view
+        function renderView() {
+            destroyCharts();
+            const analytics = calculateAnalytics(tickets);
+            updateMetrics(analytics);
+
+            if (currentView === 'overview') {
+                renderOverview(analytics);
+            } else if (currentView === 'categories') {
+                renderCategories(analytics);
+            } else if (currentView === 'agents') {
+                renderAgents(analytics);
+            }
+        }
+
+        // Initialize
+        function init() {
+            tickets = parseCSV(currentCSV);
+            renderView();
+        }
+
+        // Event Listeners
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                currentView = e.target.dataset.view;
+                document.querySelectorAll('.view-btn').forEach(b => {
+                    b.className = 'view-btn px-6 py-3 rounded-lg font-semibold tracking-wider uppercase text-sm transition-all bg-gray-800 bg-opacity-50 text-gray-400 hover:text-white border border-gray-700';
+                });
+                e.target.className = 'view-btn px-6 py-3 rounded-lg font-semibold tracking-wider uppercase text-sm transition-all bg-gradient-to-r from-cyan-500 to-purple-500 text-white shadow-lg shadow-purple-500/50';
+                renderView();
+            });
+        });
+
+        document.getElementById('changeDataBtn').addEventListener('click', () => {
+            document.getElementById('uploadModal').classList.remove('hidden');
+        });
+
+        document.getElementById('cancelUploadBtn').addEventListener('click', () => {
+            document.getElementById('uploadModal').classList.add('hidden');
+        });
+
+        document.getElementById('resetDataBtn').addEventListener('click', () => {
+            currentCSV = defaultCSV;
+            document.getElementById('resetDataBtn').classList.add('hidden');
+            init();
+        });
+
+        document.getElementById('csvFileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    currentCSV = event.target.result;
+                    document.getElementById('uploadModal').classList.add('hidden');
+                    document.getElementById('resetDataBtn').classList.remove('hidden');
+                    init();
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        document.getElementById('closeModalBtn').addEventListener('click', () => {
+            document.getElementById('agentModal').classList.remove('flex');
+            document.getElementById('agentModal').classList.add('hidden');
+        });
+
+        // Initialize dashboard
+        init();
+    </script>
+</body>
+</html>
